@@ -36,6 +36,8 @@ open(my $fherr, ">:encoding(UTF-8)", "$fname.prep_log") or die("Can't open $fnam
 #my $junkchar = qr/[\p{C}\P{Print}\p{CJK_Unified_Ideographs_Extension_A}\p{CJK_Unified_Ideographs_Extension_B}\p{CJK_Unified_Ideographs_Extension_C}]/;
 my $junkchar = qr/[^\p{BasicLatin}\p{CJKUnifiedIdeographs}]/;
 my %junkcnt = ();
+
+# a set of regular expressions
 my $domain = qr/([a-z0-9][a-z0-9\-]*\.)+[a-z]{2,}/i;
 my $protocol = qr{(http[s]?|ftp)://}i;
 my $path = qr/([a-z0-9_\-\.\/]|%[0-9a-f]{2})+/i;
@@ -43,6 +45,8 @@ my $query = qr/([a-z0-9*_=&\+\-\.]|%[0-9a-f]{2})+/i;
 my $fragid = qr/[a-z0-9_\.]+/i;
 my $email = qr/[a-z0-9_\-\.]+\@$domain/i;
 my $url = qr/$protocol$domain(:[0-9]+)?(\/$path(\?$query)?(\#$fragid)?)?/i;
+my $number = qr/[0-9]+(\.[0-9]+)?(<TIMES>10\^?[0-9]+)?/;
+my $numorden = qr/[0-9]+(1\-?st|2\-?nd|3\-?rd|[04-9]\-?th)/i;
 my $xmltag = qr/<[^>]+>/;
 #my $clause_a = qr/([\p{L}\'\"\(\$]|$xmltag)/;
 #my $clause_z = qr/([\p{L}\'\"\)\%]|$xmltag)/;
@@ -73,8 +77,10 @@ while(!eof($fhin)) {
 		s/$email/<EMAIL>/ig;
 		# replace URL with XML tag
 		s/$url/<URL>/ig;
+		# replace English ordinal number (mixed digit-letter form) with XML tag
+		s/$numorden/<NUM_ORD_EN>/ig;
 		# replace identifiers with XML tag
-		s/@\w+/<IDEN>/g;
+		s/@\w+/<REFERID>/g;
 		s{([A-Za-z0-9_]+)}
 			{
 				my $str = $1;
@@ -126,7 +132,7 @@ while(!eof($fhin)) {
 		s/\N{DEGREE SIGN}/<DEGREE>/g;
 		s/\N{DEGREE CELSIUS}/<DEGREE>C/g;
 		s/\N{DEGREE FAHRENHEIT}/<DEGREE>F/g;
-		s/[0-9]+(\.[0-9]+)?(<TIMES>10\^?[0-9]+)?/<NUM>/g;
+		s/$number/<NUM>/g;
 		
 		my $junky = m/$junkchar/;
 		if($junky) {
