@@ -52,14 +52,6 @@ while(!eof($fhin)) {
 		s/\s+/ /g; # replace excessive and non-ASCII whitespace with a single space (\x{20})
 		s/[\x{00}-\x{1F}\x{7F}]//g; # delete ASCII control characters
 		s/\p{Cf}//g; # delete format characters
-		s{(\p{InHalfwidthAndFullwidthForms})} # replace fullwidth characters with halfwidth characters
-			{
-				my $char = $1;
-				my $name = charnames::viacode(ord($char));
-				(substr($name, 0, 10) eq 'FULLWIDTH ')
-					? chr(charnames::vianame(substr($name, 10)))
-				: $char;
-			}eg;
 		# replace email address with XML tag
 		my $domain = qr/([a-z0-9][a-z0-9\-]*\.)+[a-z]{2,}/i;
 		s/[a-z0-9_\-\.]\@$domain/<EMAIL>/ig;
@@ -68,7 +60,16 @@ while(!eof($fhin)) {
 		my $path = qr/([a-z0-9_\-\.\/]|%[0-9a-f]{2})+/i;
 		my $query = qr/([a-z0-9*_=&\+\-\.]|%[0-9a-f]{2})+/i;
 		my $fragid = qr/[a-z0-9_\.]+/i;
-		s/($protocol)?$domain(:[0-9]+)(\/$path(\?$query)?(\#$fragid)?)?/<URL>/ig;
+		s/($protocol)$domain(:[0-9]+)?(\/$path(\?$query)?(\#$fragid)?)?/<URL>/ig;
+		# replace fullwidth characters with halfwidth characters
+		s{(\p{InHalfwidthAndFullwidthForms})}
+			{
+				my $char = $1;
+				my $name = charnames::viacode(ord($char));
+				(substr($name, 0, 10) eq 'FULLWIDTH ')
+					? chr(charnames::vianame(substr($name, 10)))
+				: $char;
+			}eg;
 		# replace non-ASCII punctuations with their ASCII counterparts:
 		s/[\N{HYPHEN}\N{NON-BREAKING HYPHEN}\N{FIGURE DASH}\N{EN DASH}\N{EM DASH}\N{HORIZONTAL BAR}\N{HYPHEN BULLET}\N{BOX DRAWINGS LIGHT HORIZONTAL}\N{MINUS SIGN}]/\-/g;
 		s/[\N{LEFT SINGLE QUOTATION MARK}\N{RIGHT SINGLE QUOTATION MARK}\N{SINGLE LOW-9 QUOTATION MARK}\N{SINGLE HIGH-REVERSED-9 QUOTATION MARK}\N{PRIME}\N{REVERSED PRIME}\N{SINGLE LEFT-POINTING ANGLE QUOTATION MARK}\N{SINGLE RIGHT-POINTING ANGLE QUOTATION MARK}]/\'/g;
@@ -90,6 +91,7 @@ while(!eof($fhin)) {
 		s/\N{DOUBLE QUESTION MARK}/??/g;
 		s/\N{QUESTION EXCLAMATION MARK}/?!/g;
 		s/\N{EXCLAMATION QUESTION MARK}/!?/g;
+		s/\p{Sc}/\$/g; # replace currency symbols with dollar sign
 		# replace certain symbols with letters and/or numbers
 		s/\N{LATIN SMALL LETTER E WITH ACUTE}/e/g; # replace acute e with normal e
 		#tr/\N{ROMAN NUMERAL ONE}-\N{ROMAN NUMERAL NINE}\N{SMALL ROMAN NUMERAL ONE}-N{SMALL ROMAN NUMERAL NINE}/1-91-9/;
@@ -121,7 +123,8 @@ while(!eof($fhin)) {
 			s/\s+/ /g;
 			s/^\s+//;
 			s/\s+$//;
-			my $wellformed = m/^[\"\']?\p{L}([\p{L}_,;:%&\$\/\(\)\-\|\'\"\!\?\. ]|<[^>]+>)*(\.|[!?]{1,2}|\.\.\.)[\"\']?$/;
+			my $wellformed =  (scalar(() = m/\(/g) == scalar(() = m/\)/g)) && (scalar(() = m/\"/g) % 2 == 0)
+							&& m/^\"?\p{L}([\p{L}_,;:%&\$\/\(\)\-\|\'\"\!\?\. ]|<[^>]+>)*\p{L}\"?(\.|[!?]+|\.\.\.)\"?$/;
 			if(!$wellformed) {
 				print $fherr "ill-formed sentence in line $ln: $_\n";
 				$bad = 1;
