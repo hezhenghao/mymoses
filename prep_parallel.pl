@@ -36,6 +36,23 @@ open(my $fherr, ">:encoding(UTF-8)", "$fname.prep_log") or die("Can't open $fnam
 #my $junkchar = qr/[\p{C}\P{Print}\p{CJK_Unified_Ideographs_Extension_A}\p{CJK_Unified_Ideographs_Extension_B}\p{CJK_Unified_Ideographs_Extension_C}]/;
 my $junkchar = qr/[^\p{BasicLatin}\p{CJKUnifiedIdeographs}]/;
 my %junkcnt = ();
+my $domain = qr/([a-z0-9][a-z0-9\-]*\.)+[a-z]{2,}/i;
+my $protocol = qr{(http[s]?|ftp)://}i;
+my $path = qr/([a-z0-9_\-\.\/]|%[0-9a-f]{2})+/i;
+my $query = qr/([a-z0-9*_=&\+\-\.]|%[0-9a-f]{2})+/i;
+my $fragid = qr/[a-z0-9_\.]+/i;
+my $email = qr/[a-z0-9_\-\.]+\@$domain/i;
+my $url = qr/$protocol$domain(:[0-9]+)?(\/$path(\?$query)?(\#$fragid)?)?/i;
+my $xmltag = qr/<[^>]+>/;
+my $clause_a = qr/([\p{L}\'\"\(\$]|$xmltag)/;
+my $clause_z = qr/([\p{L}\'\"\)\%]|$xmltag)/;
+my $clause_m = qr/([\p{L}\'\"\(\)\$\%\~\&\-\/\. ]|$xmltag)/;
+my $clause = qr/($clause_a($clause_m)*$clause_z|\p{L}|$xmltag)/;
+my $clp = qr/$clause[,;:!?]/; # clp: clause with punctuation
+my $clpz = qr/$clause([;\.]|[!?]+|\.{3,6})/;
+#my $sentence = qr/(\"?\p{L}([\p{L},;:%&\$\/\(\)\-\|\'\"\!\?\. ]|<[^>]+>)*\p{L}\"?(;|\.|[!?]+|\.\.\.)\"?)/;
+#my $sentence = qr/(($clp|\($clp\)|\'$clp\'|\"$clp\") ?)*($clpz|\($clpz\)|\'$clpz\'|\"$clpz\")/;
+my $sentence = qr/($clp[\'\"\)]? ?)*$clpz[\'\"\)]?/;
 
 my $ln = 0;
 my @sentence = ("") x $nlan;
@@ -53,14 +70,9 @@ while(!eof($fhin)) {
 		s/[\x{00}-\x{1F}\x{7F}]//g; # delete ASCII control characters
 		s/\p{Cf}//g; # delete format characters
 		# replace email address with XML tag
-		my $domain = qr/([a-z0-9][a-z0-9\-]*\.)+[a-z]{2,}/i;
-		s/[a-z0-9_\-\.]\@$domain/<EMAIL>/ig;
+		s/$email/<EMAIL>/ig;
 		# replace URL with XML tag
-		my $protocol = qr{(http[s]?|ftp)://}i;
-		my $path = qr/([a-z0-9_\-\.\/]|%[0-9a-f]{2})+/i;
-		my $query = qr/([a-z0-9*_=&\+\-\.]|%[0-9a-f]{2})+/i;
-		my $fragid = qr/[a-z0-9_\.]+/i;
-		s/($protocol)$domain(:[0-9]+)?(\/$path(\?$query)?(\#$fragid)?)?/<URL>/ig;
+		s/$url/<URL>/ig;
 		# replace fullwidth characters with halfwidth characters
 		s{(\p{InHalfwidthAndFullwidthForms})}
 			{
@@ -124,7 +136,7 @@ while(!eof($fhin)) {
 			s/^\s+//;
 			s/\s+$//;
 			my $wellformed =  (scalar(() = m/\(/g) == scalar(() = m/\)/g)) && (scalar(() = m/\"/g) % 2 == 0)
-							&& m/^\"?\p{L}([\p{L}_,;:%&\$\/\(\)\-\|\'\"\!\?\. ]|<[^>]+>)*\p{L}\"?(\.|[!?]+|\.\.\.)\"?$/;
+							&& m/^($clause|$sentence)$/;
 			if(!$wellformed) {
 				print $fherr "ill-formed sentence in line $ln: $_\n";
 				$bad = 1;
