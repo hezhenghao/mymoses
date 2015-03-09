@@ -14,9 +14,10 @@
 ## If junk characters (Unicode properties C=true or Print=false, or those belonging to 
 ## the CJK Unified Ideographs Extension blocks) occurs in a sentence, 
 ## then this sentence and its parallel sentences are discarded.
+
 use strict;
 use utf8;
-use Unicode::EastAsianWidth; # must do that again for 5.8.1
+use Unicode::EastAsianWidth;
 require charnames;
 binmode(STDIN,  ':utf8');
 binmode(STDOUT, ':utf8');
@@ -59,20 +60,28 @@ while(!eof($fhin)) {
 					? chr(charnames::vianame(substr($name, 10)))
 				: $char;
 			}eg;
+		# replace email address with XML tag
+		my $domain = qr/([a-z0-9][a-z0-9\-]*\.)+[a-z]{2,}/i;
+		s/[a-z0-9_\-\.]\@$domain/<EMAIL>/ig;
+		# replace URL with XML tag
+		my $protocol = qr{(http[s]?|ftp)://}i;
+		my $path = qr/([a-z0-9_\-\.\/]|%[0-9a-f]{2})+/i;
+		my $query = qr/([a-z0-9*_=&\+\-\.]|%[0-9a-f]{2})+/i;
+		my $fragid = qr/[a-z0-9_\.]+/i;
+		s/($protocol)?$domain(:[0-9]+)(\/$path(\?$query)?(\#$fragid)?)?/<URL>/ig;
 		# replace non-ASCII punctuations with their ASCII counterparts:
-		#$line =~ tr/“”‘’‐—「」/""''--""/;
-		s/[\N{HYPHEN}\N{NON-BREAKING HYPHEN}\N{FIGURE DASH}\N{EN DASH}\N{EM DASH}\N{HORIZONTAL BAR}\N{HYPHEN BULLET}\N{BOX DRAWINGS LIGHT HORIZONTAL}\N{MINUS SIGN}\N{BULLET}\N{MIDDLE DOT}]/\-/g;
+		s/[\N{HYPHEN}\N{NON-BREAKING HYPHEN}\N{FIGURE DASH}\N{EN DASH}\N{EM DASH}\N{HORIZONTAL BAR}\N{HYPHEN BULLET}\N{BOX DRAWINGS LIGHT HORIZONTAL}\N{MINUS SIGN}]/\-/g;
 		s/[\N{LEFT SINGLE QUOTATION MARK}\N{RIGHT SINGLE QUOTATION MARK}\N{SINGLE LOW-9 QUOTATION MARK}\N{SINGLE HIGH-REVERSED-9 QUOTATION MARK}\N{PRIME}\N{REVERSED PRIME}\N{SINGLE LEFT-POINTING ANGLE QUOTATION MARK}\N{SINGLE RIGHT-POINTING ANGLE QUOTATION MARK}]/\'/g;
 		s/[\N{LEFT DOUBLE QUOTATION MARK}\N{RIGHT DOUBLE QUOTATION MARK}\N{DOUBLE LOW-9 QUOTATION MARK}\N{DOUBLE HIGH-REVERSED-9 QUOTATION MARK}\N{DOUBLE PRIME}\N{REVERSED DOUBLE PRIME}\N{LEFT DOUBLE ANGLE BRACKET}\N{RIGHT DOUBLE ANGLE BRACKET}\N{LEFT CORNER BRACKET}\N{RIGHT CORNER BRACKET}\N{LEFT WHITE CORNER BRACKET}\N{RIGHT WHITE CORNER BRACKET}\N{REVERSED DOUBLE PRIME QUOTATION MARK}\N{DOUBLE PRIME QUOTATION MARK}\N{LOW DOUBLE PRIME QUOTATION MARK}]/\"/g;
 		s/[\N{LEFT SQUARE BRACKET WITH QUILL}\N{LEFT BLACK LENTICULAR BRACKET}\N{LEFT TORTOISE SHELL BRACKET}\N{LEFT WHITE LENTICULAR BRACKET}\N{LEFT WHITE TORTOISE SHELL BRACKET}\N{LEFT WHITE SQUARE BRACKET}]/\[/g;
 		s/[\N{RIGHT SQUARE BRACKET WITH QUILL}\N{RIGHT BLACK LENTICULAR BRACKET}\N{RIGHT TORTOISE SHELL BRACKET}\N{RIGHT WHITE LENTICULAR BRACKET}\N{RIGHT WHITE TORTOISE SHELL BRACKET}\N{RIGHT WHITE SQUARE BRACKET}]/\]/g;
-		s/[\N{LOW ASTERISK}\N{FLOWER PUNCTUATION MARK}\N{DOTTED CROSS}\N{ASTERISK OPERATOR}\N{BULLET OPERATOR}\N{DOT OPERATOR}\N{STAR OPERATOR}]/\*/g;
+		s/[\N{LOW ASTERISK}\N{FLOWER PUNCTUATION MARK}\N{DOTTED CROSS}\N{ASTERISK OPERATOR}\N{STAR OPERATOR}]/\*/g;
 		s/[\N{FRACTION SLASH}\N{DIVISION SLASH}]/\//g;
 		s/[\N{SET MINUS}]/\\/g;
 		s/[\N{DIVIDES}]/\|/g;
 		s/[\N{SWUNG DASH}\N{WAVE DASH}]/\~/g;
-		s/[\N{TWO DOT PUNCTUATION}\N{RATIO}]/\:/g;
-		s/[\N{IDEOGRAPHIC COMMA}]/\,/g;
+		s/[\N{TWO DOT PUNCTUATION}\N{RATIO}\N{PRESENTATION FORM FOR VERTICAL TWO DOT LEADER}\N{PRESENTATION FORM FOR VERTICAL COLON}\N{SMALL COLON}]/\:/g;
+		s/[\N{IDEOGRAPHIC COMMA}\N{SMALL COMMA}\N{SMALL IDEOGRAPHIC COMMA}\N{SESAME DOT}\N{PRESENTATION FORM FOR VERTICAL IDEOGRAPHIC COMMA}]/\,/g;
 		s/[\N{IDEOGRAPHIC FULL STOP}]/\./g;
 		s/[\N{LEFT ANGLE BRACKET}]/\</g;
 		s/[\N{RIGHT ANGLE BRACKET}]/\>/g;
@@ -81,8 +90,20 @@ while(!eof($fhin)) {
 		s/\N{DOUBLE QUESTION MARK}/??/g;
 		s/\N{QUESTION EXCLAMATION MARK}/?!/g;
 		s/\N{EXCLAMATION QUESTION MARK}/!?/g;
+		# replace certain symbols with letters and/or numbers
+		s/\N{LATIN SMALL LETTER E WITH ACUTE}/e/g; # replace acute e with normal e
+		#tr/\N{ROMAN NUMERAL ONE}-\N{ROMAN NUMERAL NINE}\N{SMALL ROMAN NUMERAL ONE}-N{SMALL ROMAN NUMERAL NINE}/1-91-9/;
+		# replace numbers and certain symbols with XML tags
+		s/[\N{BULLET}\N{MIDDLE DOT}\N{KATAKANA MIDDLE DOT}\N{BULLET OPERATOR}\N{DOT OPERATOR}]/<MIDDOT>/g;
+		s/[\N{MULTIPLICATION SIGN}\N{MULTIPLICATION X}\N{HEAVY MULTIPLICATION X}\N{CROSS MARK}\N{N-ARY TIMES OPERATOR}\N{VECTOR OR CROSS PRODUCT}]/<TIMES>/g;
+		s/[\N{COMBINING ENCLOSING CIRCLE}\N{WHITE CIRCLE}\N{LARGE CIRCLE}\N{IDEOGRAPHIC NUMBER ZERO}]/<CIRCLE>/g;
+		s/[\N{GREEK CAPITAL LETTER ALPHA}-\N{GREEK CAPITAL LETTER OMEGA}\N{GREEK SMALL LETTER ALPHA}-\N{GREEK SMALL LETTER OMEGA}]/<GREEK>/g;
+		s/\N{DEGREE SIGN}/<DEGREE>/g;
+		s/\N{DEGREE CELSIUS}/<DEGREE>C/g;
+		s/\N{DEGREE FAHRENHEIT}/<DEGREE>F/g;
+		s/[0-9]+(\.[0-9]+)?(<TIMES>10\^?[0-9]+)?/<NUM>/g;
 		
-		my $junky = /$junkchar/;
+		my $junky = m/$junkchar/;
 		if($junky) {
 			s/($junkchar)/
 				if($junkcnt{$1}) {
@@ -97,8 +118,14 @@ while(!eof($fhin)) {
 			$bad = 1;
 		}
 		else {
+			s/\s+/ /g;
 			s/^\s+//;
 			s/\s+$//;
+			my $wellformed = m/^[\"\']?\p{L}([\p{L}_,;:%&\$\/\(\)\-\|\'\"\!\?\. ]|<[^>]+>)*(\.|[!?]{1,2}|\.\.\.)[\"\']?$/;
+			if(!$wellformed) {
+				print $fherr "ill-formed sentence in line $ln: $_\n";
+				$bad = 1;
+			}
 			$sentence[$ilan] = $_;
 		}
 	}
