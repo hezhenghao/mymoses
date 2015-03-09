@@ -44,15 +44,15 @@ my $fragid = qr/[a-z0-9_\.]+/i;
 my $email = qr/[a-z0-9_\-\.]+\@$domain/i;
 my $url = qr/$protocol$domain(:[0-9]+)?(\/$path(\?$query)?(\#$fragid)?)?/i;
 my $xmltag = qr/<[^>]+>/;
-my $clause_a = qr/([\p{L}\'\"\(\$]|$xmltag)/;
-my $clause_z = qr/([\p{L}\'\"\)\%]|$xmltag)/;
-my $clause_m = qr/([\p{L}\'\"\(\)\$\%\~\&\-\/\. ]|$xmltag)/;
-my $clause = qr/($clause_a($clause_m)*$clause_z|\p{L}|$xmltag)/;
-my $clp = qr/$clause[,;:!?]/; # clp: clause with punctuation
-my $clpz = qr/$clause([;\.]|[!?]+|\.{3,6})/;
+#my $clause_a = qr/([\p{L}\'\"\(\$]|$xmltag)/;
+#my $clause_z = qr/([\p{L}\'\"\)\%]|$xmltag)/;
+#my $clause_m = qr/([\p{L}\'\"\(\)\$\%\~\&\-\/\. ]|$xmltag)/;
+#my $clause = qr/($clause_a($clause_m)*$clause_z|\p{L}|$xmltag)/;
+#my $clp = qr/$clause[,;:!?]/; # clp: clause with punctuation
+#my $clpz = qr/$clause([;\.]|[!?]+|\.{3,6})/;
 #my $sentence = qr/(\"?\p{L}([\p{L},;:%&\$\/\(\)\-\|\'\"\!\?\. ]|<[^>]+>)*\p{L}\"?(;|\.|[!?]+|\.\.\.)\"?)/;
 #my $sentence = qr/(($clp|\($clp\)|\'$clp\'|\"$clp\") ?)*($clpz|\($clpz\)|\'$clpz\'|\"$clpz\")/;
-my $sentence = qr/($clp[\'\"\)]? ?)*$clpz[\'\"\)]?/;
+#my $sentence = qr/($clp[\'\"\)]? ?)*$clpz[\'\"\)]?/;
 
 my $ln = 0;
 my @sentence = ("") x $nlan;
@@ -73,18 +73,29 @@ while(!eof($fhin)) {
 		s/$email/<EMAIL>/ig;
 		# replace URL with XML tag
 		s/$url/<URL>/ig;
+		# replace identifiers with XML tag
+		s/@\w+/<IDEN>/g;
+		s{([A-Za-z0-9_]+)}
+			{
+				my $str = $1;
+				($str =~ m/[A-Za-z]/ && ($str =~ m/_/ || $str =~ m/[0-9]/))?
+					"<IDEN>"
+					: $str;
+			}eg;
 		# replace fullwidth characters with halfwidth characters
 		s{(\p{InHalfwidthAndFullwidthForms})}
 			{
 				my $char = $1;
 				my $name = charnames::viacode(ord($char));
-				(substr($name, 0, 10) eq 'FULLWIDTH ')
-					? chr(charnames::vianame(substr($name, 10)))
-				: $char;
+				(substr($name, 0, 10) eq 'FULLWIDTH ')?
+					chr(charnames::vianame(substr($name, 10)))
+					: $char;
 			}eg;
 		# replace non-ASCII punctuations with their ASCII counterparts:
 		s/[\N{HYPHEN}\N{NON-BREAKING HYPHEN}\N{FIGURE DASH}\N{EN DASH}\N{EM DASH}\N{HORIZONTAL BAR}\N{HYPHEN BULLET}\N{BOX DRAWINGS LIGHT HORIZONTAL}\N{MINUS SIGN}]/\-/g;
-		s/[\N{LEFT SINGLE QUOTATION MARK}\N{RIGHT SINGLE QUOTATION MARK}\N{SINGLE LOW-9 QUOTATION MARK}\N{SINGLE HIGH-REVERSED-9 QUOTATION MARK}\N{PRIME}\N{REVERSED PRIME}\N{SINGLE LEFT-POINTING ANGLE QUOTATION MARK}\N{SINGLE RIGHT-POINTING ANGLE QUOTATION MARK}]/\'/g;
+		#s/[\N{BULLET}\N{MIDDLE DOT}\N{KATAKANA MIDDLE DOT}\N{BULLET OPERATOR}\N{DOT OPERATOR}]/<MIDDOT>/g;
+		s/[\N{BULLET}\N{MIDDLE DOT}\N{KATAKANA MIDDLE DOT}\N{BULLET OPERATOR}\N{DOT OPERATOR}]/-/g;
+		s/[\N{LEFT SINGLE QUOTATION MARK}\N{RIGHT SINGLE QUOTATION MARK}\N{SINGLE LOW-9 QUOTATION MARK}\N{SINGLE HIGH-REVERSED-9 QUOTATION MARK}\N{PRIME}\N{REVERSED PRIME}\N{SINGLE LEFT-POINTING ANGLE QUOTATION MARK}\N{SINGLE RIGHT-POINTING ANGLE QUOTATION MARK}`]/\'/g;
 		s/[\N{LEFT DOUBLE QUOTATION MARK}\N{RIGHT DOUBLE QUOTATION MARK}\N{DOUBLE LOW-9 QUOTATION MARK}\N{DOUBLE HIGH-REVERSED-9 QUOTATION MARK}\N{DOUBLE PRIME}\N{REVERSED DOUBLE PRIME}\N{LEFT DOUBLE ANGLE BRACKET}\N{RIGHT DOUBLE ANGLE BRACKET}\N{LEFT CORNER BRACKET}\N{RIGHT CORNER BRACKET}\N{LEFT WHITE CORNER BRACKET}\N{RIGHT WHITE CORNER BRACKET}\N{REVERSED DOUBLE PRIME QUOTATION MARK}\N{DOUBLE PRIME QUOTATION MARK}\N{LOW DOUBLE PRIME QUOTATION MARK}]/\"/g;
 		s/[\N{LEFT SQUARE BRACKET WITH QUILL}\N{LEFT BLACK LENTICULAR BRACKET}\N{LEFT TORTOISE SHELL BRACKET}\N{LEFT WHITE LENTICULAR BRACKET}\N{LEFT WHITE TORTOISE SHELL BRACKET}\N{LEFT WHITE SQUARE BRACKET}]/\[/g;
 		s/[\N{RIGHT SQUARE BRACKET WITH QUILL}\N{RIGHT BLACK LENTICULAR BRACKET}\N{RIGHT TORTOISE SHELL BRACKET}\N{RIGHT WHITE LENTICULAR BRACKET}\N{RIGHT WHITE TORTOISE SHELL BRACKET}\N{RIGHT WHITE SQUARE BRACKET}]/\]/g;
@@ -103,12 +114,12 @@ while(!eof($fhin)) {
 		s/\N{DOUBLE QUESTION MARK}/??/g;
 		s/\N{QUESTION EXCLAMATION MARK}/?!/g;
 		s/\N{EXCLAMATION QUESTION MARK}/!?/g;
-		s/\p{Sc}/\$/g; # replace currency symbols with dollar sign
+		# replace currency symbols with dollar sign
+		s/\p{Sc}/\$/g;
 		# replace certain symbols with letters and/or numbers
 		s/\N{LATIN SMALL LETTER E WITH ACUTE}/e/g; # replace acute e with normal e
 		#tr/\N{ROMAN NUMERAL ONE}-\N{ROMAN NUMERAL NINE}\N{SMALL ROMAN NUMERAL ONE}-N{SMALL ROMAN NUMERAL NINE}/1-91-9/;
 		# replace numbers and certain symbols with XML tags
-		s/[\N{BULLET}\N{MIDDLE DOT}\N{KATAKANA MIDDLE DOT}\N{BULLET OPERATOR}\N{DOT OPERATOR}]/<MIDDOT>/g;
 		s/[\N{MULTIPLICATION SIGN}\N{MULTIPLICATION X}\N{HEAVY MULTIPLICATION X}\N{CROSS MARK}\N{N-ARY TIMES OPERATOR}\N{VECTOR OR CROSS PRODUCT}]/<TIMES>/g;
 		s/[\N{COMBINING ENCLOSING CIRCLE}\N{WHITE CIRCLE}\N{LARGE CIRCLE}\N{IDEOGRAPHIC NUMBER ZERO}]/<CIRCLE>/g;
 		s/[\N{GREEK CAPITAL LETTER ALPHA}-\N{GREEK CAPITAL LETTER OMEGA}\N{GREEK SMALL LETTER ALPHA}-\N{GREEK SMALL LETTER OMEGA}]/<GREEK>/g;
@@ -135,8 +146,9 @@ while(!eof($fhin)) {
 			s/\s+/ /g;
 			s/^\s+//;
 			s/\s+$//;
-			my $wellformed =  (scalar(() = m/\(/g) == scalar(() = m/\)/g)) && (scalar(() = m/\"/g) % 2 == 0)
-							&& m/^($clause|$sentence)$/;
+			#my $wellformed =  (scalar(() = m/\(/g) == scalar(() = m/\)/g)) && (scalar(() = m/\"/g) % 2 == 0)
+			#				&& m/^($clause|$sentence)$/;
+			my $wellformed = m/^([\p{L}0-9~!\$%&\(\)\-\[\];:\'\",\.\?\/ ]|$xmltag)+$/;
 			if(!$wellformed) {
 				print $fherr "ill-formed sentence in line $ln: $_\n";
 				$bad = 1;
