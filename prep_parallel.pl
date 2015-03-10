@@ -80,7 +80,7 @@ my $fragid = qr/[a-z0-9_\.]+/i;
 my $email = qr/[a-z0-9_\-\.]+\@$domain/i;
 my $url = qr/$protocol$domain(:[0-9]+)?(\/($path(\?$query)?(\#$fragid)?)?)?/i;
 my $number = qr/[0-9]+(\.[0-9]+)?(<TIMES>10\^?[0-9]+)?/;
-my $numorden = qr/[0-9]+(1\-?st|2\-?nd|3\-?rd|[0-9]\-?th)/i;
+my $numorden = qr/\b[0-9]+(1\-?st|2\-?nd|3\-?rd|[0-9]\-?th)\b/i;
 my $xmltag = qr/<[^>]+>/;
 #my $clause_a = qr/([\p{L}\'\"\(\$]|$xmltag)/;
 #my $clause_z = qr/([\p{L}\'\"\)\%]|$xmltag)/;
@@ -115,13 +115,7 @@ while(!eof($fhin)) {
 		s/$numorden/<NUM EN ORD>/ig;
 		# replace identifiers with XML tag
 		#s/@\w+/<REFERID>/g;
-		s{([A-Za-z0-9_]+)}
-			{
-				my $str = $1;
-				($str =~ m/[A-Za-z]/ && ($str =~ m/_/ || $str =~ m/[0-9]/))?
-					"<IDEN>"
-					: $str;
-			}eg;
+		s/[a-z][a-z0-9_]*[0-9_][a-z0-9_]*/<IDEN>/ig;
 		# replace fullwidth characters with halfwidth characters
 		s{(\p{InHalfwidthAndFullwidthForms})}
 			{
@@ -187,7 +181,7 @@ while(!eof($fhin)) {
 			#				&& m/^($clause|$sentence)$/;
 			#my $wellformed = m/^([\p{L}0-9~!\$%&\(\)\-\[\];:\'\",\.\?\/ ]|$xmltag)+$/;
 			my $letter = $letterchars{$lans[$ilan]} // qr/\p{L}/;
-			my $wellformed = m/^($letter|[0-9~!\$%&\(\)\-\[\];:\'\",\.\?\/ ]|$xmltag)+$/;
+			my $wellformed = m/^(<NUM> ?%|\$ ?<NUM>|$xmltag|[0-9~!&\(\)\-\[\];:\'\",\.\?\/ ]|$letter)+$/;
 			if(!$wellformed) {
 				print $fherr "ill-formed sentence in line $ln: $_\n";
 				$bad = 1;
