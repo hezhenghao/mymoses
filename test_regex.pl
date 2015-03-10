@@ -1,19 +1,4 @@
-## Split a raw text file containing parallel corpus of N languages into N files,
-## discarding sentences with junk characters in the process.
-## 
-## Input file: a raw text file in the following format:
-##     s1l1  (s1l1 meaning sentence #1, language #1)
-##     ...
-##     s1lN
-##     s2l1
-##     ...
-##     s2lN
-##     ...
-## Output file: N raw text files, one for each language.
-## 
-## If junk characters (Unicode properties C=true or Print=false, or those belonging to 
-## the CJK Unified Ideographs Extension blocks) occurs in a sentence, 
-## then this sentence and its parallel sentences are discarded.
+## Test whether a string matches several defined regular expressions
 
 use strict;
 use utf8;
@@ -31,14 +16,25 @@ my $protocol = qr{(http[s]?|ftp)://}i;
 my $path = qr/([a-z0-9_\-\.\/]|%[0-9a-f]{2})+/i;
 my $query = qr/([a-z0-9*_=&\+\-\.]|%[0-9a-f]{2})+/i;
 my $fragid = qr/[a-z0-9_\.]+/i;
+my $email = qr/[a-z0-9_\-\.]+\@$domain/i;
+my $url = qr/$protocol$domain(:[0-9]+)?(\/($path(\?$query)?(\#$fragid)?)?)?/i;
+my $number = qr/[0-9]+(\.[0-9]+)?(<TIMES>10\^?[0-9]+)?/;
+my $numorden = qr/[0-9]+(1\-?st|2\-?nd|3\-?rd|[0-9]\-?th)/i;
+my $xmltag = qr/<[^>]+>/;
 
-my $email = qr/[a-z0-9_\-\.]\@$domain/i;
-my $url = qr/($protocol)?$domain(:[0-9]+)?(\/$path(\?$query)?(\#$fragid)?)?/i;
+my %pattern = (
+				'domain', $domain,
+				'protocol', $protocol,
+				'path', $path,
+				'query', $query,
+				'fragid', $fragid,
+				'email', $email,
+				'url', $url,
+				'number', $number,
+				'numorden', $numorden,
+				'xmltag', $xmltag,
+				);
 
-print "domain: ", scalar($teststr =~ m/^$domain$/i)?"YES":"NO", "\n";
-print "protocol: ", scalar($teststr =~ m/^$protocol$/i)?"YES":"NO", "\n";
-print "path: ", scalar($teststr =~ m/^$path$/i)?"YES":"NO", "\n";
-print "query: ", scalar($teststr =~ m/^$query$/i)?"YES":"NO", "\n";
-print "fragid: ", scalar($teststr =~ m/^$fragid$/i)?"YES":"NO", "\n";
-print "email: ", scalar($teststr =~ m/^$email$/i)?"YES":"NO", "\n";
-print "url: ", scalar($teststr =~ m/^$url$/i)?"YES":"NO", "\n";
+for my $patt (keys %pattern) {
+	print "$patt: ", scalar($teststr =~ m/^$pattern{$patt}$/i)?"YES":"NO", "\n";
+}
