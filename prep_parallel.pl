@@ -16,7 +16,7 @@
 ## If lan1 ... lanN are specified, the file extensions of the output files will be the corresponding language codes.
 ## Otherwise the file extensions will be "lan0" ... "lan<N-1>"
 ## 
-## Non-ASCII punctuation characters are replaced by their ASCII counterparts.
+## Non-ASCII punctuation characters are replaced by their ASCII counterparts. (Also backticks "`" are replaced by apostrophes "'")
 ## A number of string patterns are replaced by XML tags:
 ##    <EMAIL>       email addresses
 ##    <URL>         URLs
@@ -29,10 +29,10 @@
 ##    <CIRCLE>      various circles which can be used as ideographic zeros
 ##    <TIMES>       cross-shaped characters used in multiplication
 ##    <DEGREE>      the degree mark (U+00B0)
-## After the replacement with XML tags, the following characters will be considered junk and the sentence pairs (or sets)
+## After these replacements, the following characters will be considered junk and the sentence pairs (or sets)
 ## containing them will be discarded: ` @ # ^ * + = { } | \ and all the non-ASCII characters with Unicode property IsLetter=false.
 ## If language codes are specified, non-ASCII letter characters that are not orthographic to the language in question are also discarded. 
-## Currently the following languages are supported for this function: en zh de fr jp
+## Currently the following languages are supported for this functionality: en zh de fr jp
 
 use strict;
 use utf8;
@@ -78,7 +78,7 @@ my $path = qr/([a-z0-9_\-\.\/]|%[0-9a-f]{2})+/i;
 my $query = qr/([a-z0-9*_=&\+\-\.]|%[0-9a-f]{2})+/i;
 my $fragid = qr/[a-z0-9_\.]+/i;
 my $email = qr/[a-z0-9_\-\.]+\@$domain/i;
-my $url = qr/$protocol$domain(:[0-9]+)?(\/$path(\?$query)?(\#$fragid)?)?/i;
+my $url = qr/$protocol$domain(:[0-9]+)?(\/($path(\?$query)?(\#$fragid)?)?)?/i;
 my $number = qr/[0-9]+(\.[0-9]+)?(<TIMES>10\^?[0-9]+)?/;
 my $numorden = qr/[0-9]+(1\-?st|2\-?nd|3\-?rd|[0-9]\-?th)/i;
 my $xmltag = qr/<[^>]+>/;
@@ -114,7 +114,7 @@ while(!eof($fhin)) {
 		# replace English ordinal number (mixed digit-letter form) with XML tag
 		s/$numorden/<NUM EN ORD>/ig;
 		# replace identifiers with XML tag
-		s/@\w+/<REFERID>/g;
+		#s/@\w+/<REFERID>/g;
 		s{([A-Za-z0-9_]+)}
 			{
 				my $str = $1;
@@ -155,9 +155,6 @@ while(!eof($fhin)) {
 		s/\N{EXCLAMATION QUESTION MARK}/!?/g;
 		# replace currency symbols with dollar sign
 		s/\p{Sc}/\$/g;
-		## replace certain symbols with letters and/or numbers
-		#s/\N{LATIN SMALL LETTER E WITH ACUTE}/e/g; # replace acute e with normal e
-		#tr/\N{ROMAN NUMERAL ONE}-\N{ROMAN NUMERAL NINE}\N{SMALL ROMAN NUMERAL ONE}-N{SMALL ROMAN NUMERAL NINE}/1-91-9/;
 		# replace numbers and certain symbols with XML tags
 		s/[\N{MULTIPLICATION SIGN}\N{MULTIPLICATION X}\N{HEAVY MULTIPLICATION X}\N{CROSS MARK}\N{N-ARY TIMES OPERATOR}\N{VECTOR OR CROSS PRODUCT}]/<TIMES>/g;
 		s/[\N{COMBINING ENCLOSING CIRCLE}\N{WHITE CIRCLE}\N{LARGE CIRCLE}\N{IDEOGRAPHIC NUMBER ZERO}]/<CIRCLE>/g;
@@ -189,8 +186,7 @@ while(!eof($fhin)) {
 			#my $wellformed =  (scalar(() = m/\(/g) == scalar(() = m/\)/g)) && (scalar(() = m/\"/g) % 2 == 0)
 			#				&& m/^($clause|$sentence)$/;
 			#my $wellformed = m/^([\p{L}0-9~!\$%&\(\)\-\[\];:\'\",\.\?\/ ]|$xmltag)+$/;
-			my $lanchar = $letterchars{$lans[$ilan]};
-			my $letter = ($lanchar)? $lanchar : qr/\p{L}/;
+			my $letter = $letterchars{$lans[$ilan]} // qr/\p{L}/;
 			my $wellformed = m/^($letter|[0-9~!\$%&\(\)\-\[\];:\'\",\.\?\/ ]|$xmltag)+$/;
 			if(!$wellformed) {
 				print $fherr "ill-formed sentence in line $ln: $_\n";
