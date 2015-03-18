@@ -9,8 +9,9 @@
 ##    <NUM>         numbers (optionally with fractional part and/or power of 10)
 ##    <NUM RM>      Roman numerals
 ##    <NUM EN ORD>  English ordinal numbers with mixed digits and letters (e.g. 11th)
+##    <ENCLOSED>    characters from the Unicode block "Enclosed Alphanumerics"
 ##    <CIRCLE>      various circles which can be used as ideographic zeros
-##    <TIMES>       cross-shaped characters used in multiplication
+##    <CROSS>       cross-shaped characters used in multiplication
 ##    <DEGREE>      the degree mark (U+00B0)
 
 use strict;
@@ -25,7 +26,7 @@ die("Usage: perl $0 <filename> [[-]euignrEctd]") if (@ARGV < 1 || @ARGV > 2);
 my $fname = $ARGV[0];
 open(my $fhin, "<:encoding(UTF-8)", $fname) or die("Can't open $fname: $!");
 open(my $fhout, ">:encoding(UTF-8)", "$fname.dcx") or die("Can't open $fname.dcx: $!");
-open(my $fherr, ">:encoding(UTF-8)", "$fname.dcx_log") or die("Can't open $fname.dcx_log: $!");
+#open(my $fherr, ">:encoding(UTF-8)", "$fname.dcx_log") or die("Can't open $fname.dcx_log: $!");
 
 # a set of regular expressions
 my $domain = qr/([a-z0-9][a-z0-9\-]*\.)+[a-z]{2,}/i;
@@ -37,7 +38,7 @@ my $email = qr/[a-z0-9_\-\.]+\@$domain/i;
 my $url = qr/($protocol|www.)$domain(:[0-9]+)?(\/($path(\?$query)?(\#$fragid)?)?)?/i;
 my $number = qr/[0-9]+(\.[0-9]+)?(<TIMES>10\^?[0-9]+)?/;
 my $numorden = qr/\b[0-9]+(1\-?st|2\-?nd|3\-?rd|[0-9]\-?th)\b/i;
-my $xmltag = qr/<[^>]+>/;
+my $xmltag = qr/<[A-Za-z]+( [^>]+)>/;
 
 my $ln = 0;
 while(!eof($fhin)) {
@@ -65,33 +66,35 @@ while(!eof($fhin)) {
 		}eg;
 	# replace non-ASCII punctuations with their ASCII counterparts:
 	s/[\N{HYPHEN}\N{NON-BREAKING HYPHEN}\N{FIGURE DASH}\N{EN DASH}\N{EM DASH}\N{HORIZONTAL BAR}\N{HYPHEN BULLET}\N{BOX DRAWINGS LIGHT HORIZONTAL}\N{MINUS SIGN}]/\-/g;
-	s/[\N{BULLET}\N{MIDDLE DOT}\N{KATAKANA MIDDLE DOT}\N{BULLET OPERATOR}\N{DOT OPERATOR}]/-/g;
-	s/[\N{LEFT SINGLE QUOTATION MARK}\N{RIGHT SINGLE QUOTATION MARK}\N{SINGLE LOW-9 QUOTATION MARK}\N{SINGLE HIGH-REVERSED-9 QUOTATION MARK}\N{PRIME}\N{REVERSED PRIME}\N{SINGLE LEFT-POINTING ANGLE QUOTATION MARK}\N{SINGLE RIGHT-POINTING ANGLE QUOTATION MARK}`]/\'/g;
-	s/[\N{LEFT DOUBLE QUOTATION MARK}\N{RIGHT DOUBLE QUOTATION MARK}\N{DOUBLE LOW-9 QUOTATION MARK}\N{DOUBLE HIGH-REVERSED-9 QUOTATION MARK}\N{DOUBLE PRIME}\N{REVERSED DOUBLE PRIME}\N{LEFT DOUBLE ANGLE BRACKET}\N{RIGHT DOUBLE ANGLE BRACKET}\N{LEFT CORNER BRACKET}\N{RIGHT CORNER BRACKET}\N{LEFT WHITE CORNER BRACKET}\N{RIGHT WHITE CORNER BRACKET}\N{REVERSED DOUBLE PRIME QUOTATION MARK}\N{DOUBLE PRIME QUOTATION MARK}\N{LOW DOUBLE PRIME QUOTATION MARK}]/\"/g;
+	s/[\N{BULLET}\N{MIDDLE DOT}\N{KATAKANA MIDDLE DOT}\N{BULLET OPERATOR}\N{DOT OPERATOR}]/\-/g; # In some cases maybe it's more desirable to replace with "." or "*".
+	s/[\N{LEFT SINGLE QUOTATION MARK}\N{RIGHT SINGLE QUOTATION MARK}\N{SINGLE LOW-9 QUOTATION MARK}\N{SINGLE HIGH-REVERSED-9 QUOTATION MARK}\N{PRIME}\N{REVERSED PRIME}\N{SINGLE LEFT-POINTING ANGLE QUOTATION MARK}\N{SINGLE RIGHT-POINTING ANGLE QUOTATION MARK}\N{ACUTE ACCENT}]/\'/g;
+	s/\`/\'/g; # In some cases maybe it's more desirable not to replace the backtick.
+	s/[\N{LEFT ANGLE BRACKET}\N{RIGHT ANGLE BRACKET}]/\'/g; # In some cases maybe it's more desirable to replace with "<" and ">".
+	s/[\N{LEFT DOUBLE QUOTATION MARK}\N{RIGHT DOUBLE QUOTATION MARK}\N{DOUBLE LOW-9 QUOTATION MARK}\N{DOUBLE HIGH-REVERSED-9 QUOTATION MARK}\N{DOUBLE PRIME}\N{REVERSED DOUBLE PRIME}\N{LEFT CORNER BRACKET}\N{RIGHT CORNER BRACKET}\N{LEFT WHITE CORNER BRACKET}\N{RIGHT WHITE CORNER BRACKET}\N{REVERSED DOUBLE PRIME QUOTATION MARK}\N{DOUBLE PRIME QUOTATION MARK}\N{LOW DOUBLE PRIME QUOTATION MARK}]/\"/g;
+	s/[\N{LEFT DOUBLE ANGLE BRACKET}\N{RIGHT DOUBLE ANGLE BRACKET}]/\"/g; # In some cases maybe it's more desirable to replace with "<<" and ">>".
 	s/[\N{LEFT SQUARE BRACKET WITH QUILL}\N{LEFT BLACK LENTICULAR BRACKET}\N{LEFT TORTOISE SHELL BRACKET}\N{LEFT WHITE LENTICULAR BRACKET}\N{LEFT WHITE TORTOISE SHELL BRACKET}\N{LEFT WHITE SQUARE BRACKET}]/\[/g;
 	s/[\N{RIGHT SQUARE BRACKET WITH QUILL}\N{RIGHT BLACK LENTICULAR BRACKET}\N{RIGHT TORTOISE SHELL BRACKET}\N{RIGHT WHITE LENTICULAR BRACKET}\N{RIGHT WHITE TORTOISE SHELL BRACKET}\N{RIGHT WHITE SQUARE BRACKET}]/\]/g;
 	s/[\N{LOW ASTERISK}\N{FLOWER PUNCTUATION MARK}\N{DOTTED CROSS}\N{ASTERISK OPERATOR}\N{STAR OPERATOR}]/\*/g;
 	s/[\N{FRACTION SLASH}\N{DIVISION SLASH}]/\//g;
 	s/[\N{SET MINUS}]/\\/g;
 	s/[\N{DIVIDES}]/\|/g;
-	s/[\N{SWUNG DASH}\N{WAVE DASH}]/\~/g;
+	s/[\N{SWUNG DASH}\N{WAVE DASH}]/\~/g; # In some cases maybe it's more desirable to replace with "-".
 	s/[\N{TWO DOT PUNCTUATION}\N{RATIO}\N{PRESENTATION FORM FOR VERTICAL TWO DOT LEADER}\N{PRESENTATION FORM FOR VERTICAL COLON}\N{SMALL COLON}]/\:/g;
 	s/[\N{IDEOGRAPHIC COMMA}\N{SMALL COMMA}\N{SMALL IDEOGRAPHIC COMMA}\N{SESAME DOT}\N{PRESENTATION FORM FOR VERTICAL IDEOGRAPHIC COMMA}]/\,/g;
 	s/[\N{IDEOGRAPHIC FULL STOP}]/\./g;
-	s/[\N{LEFT ANGLE BRACKET}]/\</g;
-	s/[\N{RIGHT ANGLE BRACKET}]/\>/g;
-	s/\N{HORIZONTAL ELLIPSIS}/.../g;
-	s/\N{DOUBLE EXCLAMATION MARK}/!!/g;
-	s/\N{DOUBLE QUESTION MARK}/??/g;
-	s/\N{QUESTION EXCLAMATION MARK}/?!/g;
-	s/\N{EXCLAMATION QUESTION MARK}/!?/g;
+	s/\N{HORIZONTAL ELLIPSIS}/\.\.\./g;
+	s/\N{DOUBLE EXCLAMATION MARK}/\!\!/g;
+	s/\N{DOUBLE QUESTION MARK}/\?\?/g;
+	s/\N{QUESTION EXCLAMATION MARK}/\?\!/g;
+	s/\N{EXCLAMATION QUESTION MARK}/\!\?/g;
 	# replace currency symbols with dollar sign
-	s/\p{Sc}/\$/g;
+	s/\p{Sc}/\$/g; # In some cases maybe it's more desirable not to replace the currency symbols.
 	# replace numbers and certain symbols with XML tags
-	s/[\N{MULTIPLICATION SIGN}\N{MULTIPLICATION X}\N{HEAVY MULTIPLICATION X}\N{CROSS MARK}\N{N-ARY TIMES OPERATOR}\N{VECTOR OR CROSS PRODUCT}]/<TIMES>/g;
+	s/[\N{MULTIPLICATION SIGN}\N{MULTIPLICATION X}\N{HEAVY MULTIPLICATION X}\N{CROSS MARK}\N{N-ARY TIMES OPERATOR}\N{VECTOR OR CROSS PRODUCT}]/<CROSS>/g;
 	s/[\N{COMBINING ENCLOSING CIRCLE}\N{WHITE CIRCLE}\N{LARGE CIRCLE}\N{IDEOGRAPHIC NUMBER ZERO}]/<CIRCLE>/g;
 	s/[\N{GREEK CAPITAL LETTER ALPHA}-\N{GREEK CAPITAL LETTER OMEGA}\N{GREEK SMALL LETTER ALPHA}-\N{GREEK SMALL LETTER OMEGA}]/<GREEK>/g;
 	s/[\N{ROMAN NUMERAL ONE}-\N{ROMAN NUMERAL TWELVE}\N{SMALL ROMAN NUMERAL ONE}-\N{SMALL ROMAN NUMERAL TWELVE}]/<NUM RM>/g;
+	s/[\p{EnclosedAlphanumerics}\p{EnclosedCJKLettersAndMonths}]/<ENCLOSED>/g;
 	s/\N{DEGREE SIGN}/<DEGREE>/g;
 	s/\N{DEGREE CELSIUS}/<DEGREE>C/g;
 	s/\N{DEGREE FAHRENHEIT}/<DEGREE>F/g;
