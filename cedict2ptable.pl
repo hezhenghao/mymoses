@@ -43,13 +43,14 @@ while(<$fhin>) {
 	for my $def (split(/[\/;]/, $definition)) {
 		# curate definition
 		my $def_o = $def;
-		$def =~ s/([\p{LC}-\.' ]+) \(([0-9\-\? ]|c\.|BC|AD)+\), .+/$1/; # leave only the person name in definition of person names
+		$def =~ s/([\p{LC}\-\.\' ]+) \(([0-9\-\? ]|c\.|BC|AD)+\), .+/$1/; # leave only the person name in definition of person names
 		$def =~ s/\(.+?\)|\[.+?\]|\blit\.|\bfig\.|\bi\.e\. .+|\be\.g\. .+//g; # delete explanatory contents
 		$def =~ s/\bsth\b/it/g; # replace "sth" in definitions with "it"
 		$def =~ s/\b(sb|one's|oneself)\b//g; # delete "sb", "one's", "oneself" in definitions
 		$def =~ s/^(two-character |polysyllabic )?surname (.+)$/$2/; # leave only the surname in definitions of surnames
-		$def =~ s/^((\p{Lu}\p{LC}*|the|of|to|and|for|in|on|at|-|,|\.|'|"| )+), \p{Ll}.*$/$1/; # delete descriptions in definitions of proper nouns, e.g. Head Word, descriptions ...)
+		$def =~ s/^((\p{Lu}[\p{LC}\-\']*|the|of|to|and|for|in|on|at|with|[\-,\.\'\" ])+), \p{Ll}.*$/$1/; # delete descriptions in definitions of proper nouns, e.g. Head Word, descriptions ...)
 		$def =~ s/^\s*(to|be) //; # delete the starting "to" and "be" in the definition of verbs/adjectives
+		$def =~ s/^\s*\.+//; # delete starting dots
 		$def =~ s/\s*[ ,;\.\!\?]+\s*$//; # delete ending punctuations
 		#$def = lc($def);
 		$def =~ s/\s+/ /g;
@@ -67,7 +68,11 @@ while(<$fhin>) {
 			print STDERR "Definition \"$def_o\" for the entry \"$zhs\" is a P.S., skipped\n";
 			next;
 		}
-		if ($def =~ /\.\.\./) { # skip definitions containing "..."
+		if ($def =~ /[\(\)\[\]]|[^\p{ASCII}\p{Latin}]/) { # skip definitions containing brackets or non-ASCII-non-Latin characters
+			print STDERR "Definition \"$def_o\" for the entry \"$zhs\" contains unacceptable characters, skipped\n";
+			next;
+		}
+		if ($def =~ /\.\.\.+/) { # skip definitions containing ellipses
 			print STDERR "Definition \"$def_o\" for the entry \"$zhs\" contains ellipses, skipped\n";
 			next;
 		}
@@ -91,13 +96,16 @@ while(<$fhin>) {
 			print $fhout "$zhs ||| $def\n";
 		}
 	}
-	else { # No definitions for this head word. Add the pinyin as a definition entry
-		print STDERR "The headword \"$zhs\" has no entry, add a pinyin entry\n";
-		$pinyin =~ s/[1-5\: ]//g;
-		$pinyin =~ s/\-/ /g;
-		$pinyin =~ s/,/ , /g;
-		#$pinyin = lc($pinyin);
-		print $fhout "$zhs ||| $pinyin\n";
+	else { # No definitions for this head word. Add the pinyin as a definition entry for single-character head word
+		print STDERR "The headword \"$zhs\" has no entry\n";
+		#if ($zhslen == 1) {
+		#	print STDERR "Add a pinyin entry for single character headword \"$zhs\"\n";
+		#	$pinyin =~ s/[1-5\: ]//g;
+		#	$pinyin =~ s/\-/ /g;
+		#	$pinyin =~ s/,/ , /g;
+		#	#$pinyin = lc($pinyin);
+		#	print $fhout "$zhs ||| $pinyin\n";
+		#}
 	}
 }
 close($fhin);
