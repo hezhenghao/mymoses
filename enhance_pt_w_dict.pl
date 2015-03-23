@@ -172,8 +172,8 @@ for my $src (keys %h_dict_s2t) {
 
 print STDERR "New phrase table constructed. Writing to file...\n";
 open(my $fhout, ">:encoding(UTF-8)", $fn_out) or die("Can't open $fn_out: $!");
-for my $src (sort(keys %h_new_pt)) {
-	for my $tgt (sort(keys %{$h_new_pt{$src}})) {
+for my $src (keys %h_new_pt) {
+	for my $tgt (keys %{$h_new_pt{$src}}) {
 		print $fhout "$src ||| $tgt ||| ", join(" ", @{$h_new_pt{$src}->{$tgt}}), " ||| ||| \n";
 	}
 }
