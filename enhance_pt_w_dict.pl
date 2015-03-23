@@ -179,6 +179,12 @@ for my $src (sort(keys %h_new_pt)) {
 }
 close($fhout);
 
+# Sort new phrase table
+print STDERR "Sorting new phrase table...\n";
+system("LC_ALL=C sort $fn_out > $fn_out.sorted");
+system("mv $fn_out.sorted $fn_out");
+print STDERR "Done.\n";
+
 ### a subroutine for calculating the max score
 sub max_score_in_pt {
 	die("expects 3 arguments, got ".scalar(@_)) if (@_ != 3);
