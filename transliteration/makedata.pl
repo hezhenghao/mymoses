@@ -1,6 +1,23 @@
+# Take the "Dictionary for the Translation of Foreign Personal Names (世界人名翻译大辞典)" as input,
+# generate a parallel corpus for training transliteration systems.
+# 
+# Input
+#     The dictionary, saved in the files dict-1.csv and dict-2.csv
+# Output
+#     Six files, including:
+#     1) xlit-west.en, xlit-west.zh
+#        Names in languages not using Chinese characters (including those languages that are used by 
+#        certain Chinese minority groups), and their translations in Chinese
+#     2) xlit-japan.en, xlit-japan.zh
+#        Names in Japanese (which uses Chinese characters) that are phonetically translated into
+#        English, and their original forms written with Chinese characters
+#     3) xlit-ckv.en, xlit-ckv.zh
+#        Names in Chinese, Korean and Vietnamese that are phonetically translated into English,
+#        and their original forms written with Chinese characters
+
 use utf8;
 my @inFileNames = ("dict-1.csv", "dict-2.csv");
-my %outFileNames = (West => "xlit-west", Japan => "xlit-japan", CKV => "xlit-ckv"); # CKV stands for "Chinese, Korean, Vietnamese"
+my %outFileNames = (West => "xlit-west", Japan => "xlit-japan", CKV => "xlit-ckv"); # xlit stands for "transliteration", CKV stands for "Chinese, Korean, Vietnamese"
 my $cueForChangeToEast = "第二部分";
 my $cueForJapan = "日";
 my $cueForChina = "中";
@@ -45,7 +62,7 @@ for my $inFileName (@inFileNames) {
 		
 		# Replace erroneous characters
 		$line =~ tr/，、；/,,;/; # Replace fullwidth punctuations with halfwidth punctuations
-		$line =~ tr/АаӒӓЕеЁёОоӦӧ/AaÄäEeËëOoÖö/; # Replace Cyrillic homoglyphs with Latin letters
+		$line =~ tr/АаӒӓЕеЁёОоӦӧ/AaÄäEeËëOoÖö/; # Replace Cyrillic letters with Latin homoglyphs
 		$line =~ s/<sup>′<\/sup>/'/g; # Replace the string "<sup>′</sup>" with apostrophe
 		$line =~ tr/\x{009A}/š/; # Replace the character U+009A (single character introducer) with "Latin small letter S with caron"
 		$line =~ tr/∅/ø/; # Replace "empty set" with "Latin small letter O with stroke"
