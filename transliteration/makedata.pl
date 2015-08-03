@@ -1,36 +1,49 @@
 use utf8;
 my @inFileNames = ("dict-1.csv", "dict-2.csv");
-my $outFileNameEnWestern = "west.en";
-my $outFileNameZhWestern = "west.zh";
-my $outFileNameEnEastern = "east.en";
-my $outFileNameZhEastern = "east.zh";
-my $cueForChangeOutFile = "第二部分";
+my %outFileNames = (West => "xlit-west", Japan => "xlit-japan", CKV => "xlit-ckv"); # CKV stands for "Chinese, Korean, Vietnamese"
+my $cueForChangeToEast = "第二部分";
+my $cueForJapan = "日";
+my $cueForChina = "中";
+my $cueForChineseMinority = "·汉语拼音";
+my $originForChineseMinority = "中少";
 my $date = `date +%Y-%m-%d@%H:%M:%S`;
 chomp $date;
 my $errFileName = "log.$date";
 
+# Open Files
 my $fhi;
-my $fho_en;
-my $fho_zh;
+my $fhoEn;
+my $fhoZh;
 my $fhe;
-open($fho_en, ">:encoding(UTF-8)", $outFileNameEnWestern) or die("Can't open $outFileNameEnWestern!");
-open($fho_zh, ">:encoding(UTF-8)", $outFileNameZhWestern) or die("Can't open $outFileNameZhWestern!");
-open($fhe, ">:encoding(UTF-8)", $errFileName) or die("Can't open $errFileName!");
+open($fhe, ">:encoding(UTF-8)", $errFileName) or die("Can't open $errFileName!"); # Open log file
+my %fhoEns;
+my %fhoZhs;
+for my $division (keys %outFileNames) {
+	my $fileName = $outFileNames{ $division };
+	open(my $fhTempEn, ">:encoding(UTF-8)", "$fileName.en") or die("Can't open $fileName.en!");
+	$fhoEns{$division} = $fhTempEn;
+	open(my $fhTempZh, ">:encoding(UTF-8)", "$fileName.zh") or die("Can't open $fileName.zh!");
+	$fhoZhs{$division} = $fhTempZh;
+}
+
+# Go through all the records in the Name Translation Dictionary
+my $processingWest = 1;
 for my $inFileName (@inFileNames) {
-	open($fhi, "<:encoding(UTF-8)", $inFileName) or die("Can't open $inFileName!");
+	open($fhi, "<:encoding(UTF-8)", $inFileName) or die("Can't open $inFileName!"); # Open input file
 	my $lineNum = 0;
 	while(<$fhi>) {
 		chomp;
 		my $line = $_;
 		$lineNum++;
 		
-		# Change output file when a line is read containing the words "第二部分"
-		if ($line =~ /$cueForChangeOutFile/) {
-			print $fhe "Change output file at line $lineNum: $line\n";
-			close($fho_en);
-			open($fho_en, ">:encoding(UTF-8)", $outFileNameEnEastern) or die("Can't open $outFileNameEnEastern!");
-			close($fho_zh);
-			open($fho_zh, ">:encoding(UTF-8)", $outFileNameZhEastern) or die("Can't open $outFileNameZhEastern!");
+		# Change processing mode to "East" when a line is read containing the words "第二部分"
+		if ($line =~ /$cueForChangeToEast/) {
+			print $fhe "Change to East mode at line $lineNum: $line\n";
+			$processingWest = 0;
+			#close($fho_en);
+			#open($fho_en, ">:encoding(UTF-8)", $outFileNameEnEastern) or die("Can't open $outFileNameEnEastern!");
+			#close($fho_zh);
+			#open($fho_zh, ">:encoding(UTF-8)", $outFileNameZhEastern) or die("Can't open $outFileNameZhEastern!");
 			next;
 		}
 		
@@ -53,6 +66,17 @@ for my $inFileName (@inFileNames) {
 			next;
 		}
 		my ($ln, $en, $origin, $zh) = ($1, $2, $3, $4);
+		
+		# Process Origin
+		if ($origin =~ /^\"(.+)\"$/) {
+			$origin = $1;
+		}
+		if ($origin !~ /^[\p{Han},]+$/ && $zh =~ /〈(\p{Han}+)〉/) {
+			$origin = $1;
+		}
+		if ($origin =~ /$cueForChina/ && $zh =~ /\((.+)$cueForChineseMinority\)/) {
+			$origin = "$originForChineseMinority-$1";
+		}
 		
 		# Process English
 		if ($en !~ /^[\p{Latin} '-]+$/) {
@@ -87,14 +111,30 @@ for my $inFileName (@inFileNames) {
 		my $entryCount = @zhList;
 		if ($entryCount != 1) {
 			print $fhe "$entryCount entries created for line $lineNum: $line\n";
-		}		
+		}
+		next if ($entryCount == 0);
+		my $division;
+		if ($processingWest) {
+			$division = "West";
+		}
+		else {
+			if ($origin =~ /$cueForJapan/) {
+				$division = "Japan";
+			}
+			elsif ($origin =~ /$originForChineseMinority/) {
+				$division = "West";
+			} 
+			else {
+				$division = "CKV";
+			}
+		}
+		$fhoEn = $fhoEns{$division};
+		$fhoZh = $fhoZhs{$division};
 		for my $zhItem (@zhList) {
-			print $fho_en "$en\n";
-			print $fho_zh "$zhItem\n";
+			print $fhoEn "$en\n";
+			print $fhoZh "$zhItem\n";
 		}
 	}
 	close($fhi);
 }
-close($fho_en);
-close($fho_zh);
 close($fhe);
