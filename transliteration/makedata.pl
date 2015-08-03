@@ -4,8 +4,8 @@ my %outFileNames = (West => "xlit-west", Japan => "xlit-japan", CKV => "xlit-ckv
 my $cueForChangeToEast = "第二部分";
 my $cueForJapan = "日";
 my $cueForChina = "中";
-my $cueForChineseMinority = "·汉语拼音";
-my $originForChineseMinority = "中少";
+my $cueInZhForChineseMinority = "·汉语拼音";
+my $cueInOriginForChineseMinority = "中少";
 my $date = `date +%Y-%m-%d@%H:%M:%S`;
 chomp $date;
 my $errFileName = "log.$date";
@@ -15,21 +15,21 @@ my $fhi;
 my $fhoEn;
 my $fhoZh;
 my $fhe;
-open($fhe, ">:encoding(UTF-8)", $errFileName) or die("Can't open $errFileName!"); # Open log file
+open($fhe, ">:encoding(UTF-8)", $errFileName) or die $!; # Open log file
 my %fhoEns;
 my %fhoZhs;
 for my $division (keys %outFileNames) {
 	my $fileName = $outFileNames{ $division };
-	open(my $fhTempEn, ">:encoding(UTF-8)", "$fileName.en") or die("Can't open $fileName.en!");
+	open(my $fhTempEn, ">:encoding(UTF-8)", "$fileName.en") or die $!;
 	$fhoEns{$division} = $fhTempEn;
-	open(my $fhTempZh, ">:encoding(UTF-8)", "$fileName.zh") or die("Can't open $fileName.zh!");
+	open(my $fhTempZh, ">:encoding(UTF-8)", "$fileName.zh") or die $!;
 	$fhoZhs{$division} = $fhTempZh;
 }
 
 # Go through all the records in the Name Translation Dictionary
 my $processingWest = 1;
 for my $inFileName (@inFileNames) {
-	open($fhi, "<:encoding(UTF-8)", $inFileName) or die("Can't open $inFileName!"); # Open input file
+	open($fhi, "<:encoding(UTF-8)", $inFileName) or die $!; # Open input file
 	my $lineNum = 0;
 	while(<$fhi>) {
 		chomp;
@@ -40,10 +40,6 @@ for my $inFileName (@inFileNames) {
 		if ($line =~ /$cueForChangeToEast/) {
 			print $fhe "Change to East mode at line $lineNum: $line\n";
 			$processingWest = 0;
-			#close($fho_en);
-			#open($fho_en, ">:encoding(UTF-8)", $outFileNameEnEastern) or die("Can't open $outFileNameEnEastern!");
-			#close($fho_zh);
-			#open($fho_zh, ">:encoding(UTF-8)", $outFileNameZhEastern) or die("Can't open $outFileNameZhEastern!");
 			next;
 		}
 		
@@ -53,8 +49,6 @@ for my $inFileName (@inFileNames) {
 		$line =~ s/<sup>′<\/sup>/'/g; # Replace the string "<sup>′</sup>" with apostrophe
 		$line =~ tr/\x{009A}/š/; # Replace the character U+009A (single character introducer) with "Latin small letter S with caron"
 		$line =~ tr/∅/ø/; # Replace "empty set" with "Latin small letter O with stroke"
-		#$line =~ s/&#(\d+);/chr($1)/ge; # Replace HTML escape codes (decimal) with characters
-		#$line =~ s/&#x([0-9A-Fa-f]+);/chr(0x$1)/gee; # Replace HTML escape codes (hexadecimal) with characters
 		$line =~ s/&#211;/Ó/g;
 		$line =~ s/&#551;/ȧ/g;
 		$line =~ s/<span class=\"\"PUC04_f7\"\">&#xf722;<\/span>/ť/g;
@@ -74,8 +68,8 @@ for my $inFileName (@inFileNames) {
 		if ($origin !~ /^[\p{Han},]+$/ && $zh =~ /〈(\p{Han}+)〉/) {
 			$origin = $1;
 		}
-		if ($origin =~ /$cueForChina/ && $zh =~ /\((.+)$cueForChineseMinority\)/) {
-			$origin = "$originForChineseMinority-$1";
+		if ($origin =~ /$cueForChina/ && $zh =~ /\((.+)$cueInZhForChineseMinority\)/) {
+			$origin = "$cueInOriginForChineseMinority-$1";
 		}
 		
 		# Process English
@@ -121,20 +115,26 @@ for my $inFileName (@inFileNames) {
 			if ($origin =~ /$cueForJapan/) {
 				$division = "Japan";
 			}
-			elsif ($origin =~ /$originForChineseMinority/) {
+			elsif ($origin =~ /$cueInOriginForChineseMinority/) {
 				$division = "West";
 			} 
 			else {
 				$division = "CKV";
 			}
 		}
-		$fhoEn = $fhoEns{$division};
-		$fhoZh = $fhoZhs{$division};
+		$fhoEn = $fhoEns{ $division };
+		$fhoZh = $fhoZhs{ $division };
 		for my $zhItem (@zhList) {
 			print $fhoEn "$en\n";
 			print $fhoZh "$zhItem\n";
 		}
 	}
 	close($fhi);
+}
+for my $division (keys %fhoEns) {
+	close($fhoEns{ $division });
+}
+for my $division (keys %fhoZhs) {
+	close($fhoZhs{ $division });
 }
 close($fhe);
