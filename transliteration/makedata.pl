@@ -23,7 +23,7 @@ my $cueForJapan = "日";
 my $cueForChina = "中";
 my $cueInZhForChineseMinority = "·汉语拼音";
 my $cueInOriginForChineseMinority = "中少";
-my $date = `date +%Y-%m-%d@%H:%M:%S`;
+my $date = `date +%Y-%m-%d@%H-%M-%S`;
 chomp $date;
 my $errFileName = "log.$date";
 
